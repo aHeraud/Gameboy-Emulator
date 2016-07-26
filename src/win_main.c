@@ -1,4 +1,3 @@
-#include<stdint.h>
 #include<stdio.h>
 #include<stdbool.h>
 #include<SDL.h>
@@ -22,8 +21,7 @@ Tests:
 */
 
 int main(int argc, char** argv) {
-	//const char* rom_file = argv[1];
-	const char* rom_file = "test_roms/cpu_instrs/02-interrupts.gb";
+	const char* rom_file = argv[1];
 	if (argc < 2) {
 		printf("Invalid Arguments: pass name of a rom to play.\n");
 		return 0;
