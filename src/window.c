@@ -20,6 +20,7 @@ int window_init(const char *name, int width, int height) {
 	window.screen = SDL_CreateRGBSurfaceFrom(gpu.screen, 160, 144, 32, (160 * 4), 0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000);
 	if (window.screen == NULL)
 		return 1;
+
 	return 0;
 }
 

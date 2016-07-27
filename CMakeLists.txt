@@ -1,12 +1,36 @@
 #TODO: Build rules for linux
+#TODO: Clean up copying sdl dll to bin
 cmake_minimum_required(VERSION 3.5)
 project(Gameboy_Emulator)
 
 SET(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "limited configs" FORCE) #Disable unneeded configurations
 set(EXECUTABLE_OUTPUT_PATH "bin/")
 
+function(extract_bundled_externals)
+    message(STATUS "Extracting SDL2")
+    if(NOT EXISTS "${CMAKE_SOURCE_DIR}/extern/msvc")
+        file(MAKE_DIRECTORY "${CMAKE_SOURCE_DIR}/extern/msvc")
+        execute_process(COMMAND ${CMAKE_COMMAND} -E tar xf "${CMAKE_SOURCE_DIR}/extern/archive/SDL2-devel-2.0.4-VC.zip"
+                WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/extern/msvc")
+    endif()
+
+    if(NOT EXISTS "${CMAKE_SOURCE_DIR}/extern/mingw")
+        file(MAKE_DIRECTORY "${CMAKE_SOURCE_DIR}/extern/mingw")
+        execute_process(COMMAND ${CMAKE_COMMAND} -E tar xf "${CMAKE_SOURCE_DIR}/extern/archive/SDL2-devel-2.0.4-mingw.zip"
+                WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/extern/mingw")
+    endif()
+endfunction()
+
+function(copy_dll_to_bin dll_path bin_path)
+    message(STATUS "Copying SDL2.dll to build directory.")
+    file(COPY "${dll_path}" DESTINATION "${bin_path}")
+endfunction()
+
 #Platform Detection
 if(WIN32)
+    #Extract bundled SDL2
+    extract_bundled_externals()
+
     if(MSVC)
         if(CMAKE_SIZEOF_VOID_P EQUAL 8)
             #Use 64 bit sdl2 libraries
@@ -18,8 +42,8 @@ if(WIN32)
         set(SDL2_INCLUDE_DIR "extern/msvc/SDL2-2.0.4/include")
         set_property(GLOBAL PROPERTY USE_FOLDERS ON)
         set(SDL2_LIBS "SDL2.lib" "SDL2main.lib")
-        file(COPY "${SDL2_LIBRARY_DIR}/SDL2.dll" DESTINATION "${CMAKE_BINARY_DIR}/${EXECUTABLE_OUTPUT_PATH}/Debug")
-        file(COPY "${SDL2_LIBRARY_DIR}/SDL2.dll" DESTINATION "${CMAKE_BINARY_DIR}/${EXECUTABLE_OUTPUT_PATH}/Release")
+        #file(COPY "${SDL2_LIBRARY_DIR}/SDL2.dll" DESTINATION "${CMAKE_BINARY_DIR}/${EXECUTABLE_OUTPUT_PATH}/Debug")
+        #file(COPY "${SDL2_LIBRARY_DIR}/SDL2.dll" DESTINATION "${CMAKE_BINARY_DIR}/${EXECUTABLE_OUTPUT_PATH}/Release")
         set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} /SUBSYSTEM:WINDOWS")
         set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /Od /MDd")
         set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /O2 /Ob2 /Oi /Ot /GL /GS- /MD")
@@ -27,18 +51,22 @@ if(WIN32)
     elseif(MINGW)
         if(CMAKE_SIZEOF_VOID_P EQUAL 8)
             #Use 64 bit sdl2 libraries
+            set(SDL2_DLL_DIR "extern/mingw/SDL2-2.0.4/x86_64-w64-mingw32/bin")
             set(SDL2_LIBRARY_DIR "extern/mingw/SDL2-2.0.4/x86_64-w64-mingw32/lib")
             set(SDL2_INCLUDE_DIR "extern/mingw/SDL2-2.0.4/i686-w64-mingw32/include/SDL2")
         else()
             #Use 32 bit sdl2 libraries
+            set(SDL2_DLL_DIR "extern/mingw/SDL2-2.0.4/i686-w64-mingw32/bin")
             set(SDL2_LIBRARY_DIR "extern/mingw/SDL2-2.0.4/i686-w64-mingw32/lib")
-            set(SDL2_INCLUDE_DIR "extern/mingw/SDL2-2.0.4/x86_64-w64-mingw32/include/SDL2")
+            set(SDL2_INCLUDE_DIR "extern/mingw/SDL2-2.0.4/i686-w64-mingw32/include/SDL2")
         endif()
         set(SDL2_LIBS "mingw32" "SDL2main" "SDL2")
         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -Wall -Werror")
         set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -mwindows")
         set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O3")
-        file(COPY "${SDL2_LIBRARY_DIR}/../bin/SDL2.dll" DESTINATION "${CMAKE_BINARY_DIR}")
+
+        copy_dll_to_bin("${SDL2_DLL_DIR}/SDL2.dll" "${CMAKE_BINARY_DIR}")
+
     else()
         message(FATAL_ERROR "Invalid build settings (Use MSVC or MinGW)")
     endif()
@@ -60,6 +88,7 @@ set(SOURCE_FILES
     src/instructions.h
     src/joypad.c
     src/joypad.h
+    src/main.c
     src/mbc1.c
     src/mbc1.h
     src/mbc2.c
@@ -78,7 +107,6 @@ set(SOURCE_FILES
     src/serial.h
     src/timer.c
     src/timer.h
-    src/win_main.c
     src/window.c
     src/window.h)
 
