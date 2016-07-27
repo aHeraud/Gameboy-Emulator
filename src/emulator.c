@@ -1,3 +1,5 @@
+#include<SDL.h>
+
 #include"emulator.h"
 #include"cpu.h"
 #include"gpu.h"
@@ -14,7 +16,7 @@ void emulator_init() {
 	mmu_init();
 	cpu_init();
 	joypad_init();
-	window_init("Gameboy Emulator", 320, 288);
+	window_init("GameBoy Emulator", 320, 288);
 	timer_reset();
 	serial_reset();
 }

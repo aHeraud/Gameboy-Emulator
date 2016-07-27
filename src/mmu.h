@@ -1,6 +1,7 @@
 #ifndef MMU_H
 #define MMU_H
 
+#include<stdlib.h>  //For size_t
 #include<stdint.h>
 #include<stdbool.h>
 

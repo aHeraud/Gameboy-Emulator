@@ -38,14 +38,14 @@ void cpu_step() {
 
 	/*Read next opcode*/
 	uint8_t opcode;
-	uint8_t prefix = 0;
+	//uint8_t prefix = 0;
 	uint8_t length = 0;
 	uint8_t op8 = 0;
 	uint16_t op16 = 0;
 
 	opcode = read_byte(cpu.registers.pc++);
 	if (opcode == 0xCB) {
-		prefix = opcode;
+		//prefix = opcode;
 		opcode = read_byte(cpu.registers.pc++);
 		void(*execute)(void) = extended_instructions[opcode].func;
 		execute();

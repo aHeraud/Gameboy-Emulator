@@ -249,8 +249,6 @@ inline void draw_sprite(sprite_t sprite, uint8_t line, uint8_t height) {
 	if (y < 0 || y >= height)
 		return;	//not on this line
 
-	uint8_t layer = sprite.options & 0x80;
-
 	uint8_t data0;
 	uint8_t data1;
 

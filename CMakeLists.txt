@@ -2,6 +2,7 @@
 cmake_minimum_required(VERSION 3.5)
 project(Gameboy_Emulator)
 
+SET(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "limited configs" FORCE) #Disable unneeded configurations
 set(EXECUTABLE_OUTPUT_PATH "bin/")
 
 #Platform Detection
@@ -9,26 +10,37 @@ if(WIN32)
     if(MSVC)
         if(CMAKE_SIZEOF_VOID_P EQUAL 8)
             #Use 64 bit sdl2 libraries
-            set(SDL2_LIB_DIR "extern/sdl2/msvc/SDL2-2.0.4/lib/x64/")
-
+            set(SDL2_LIBRARY_DIR "extern/msvc/SDL2-2.0.4/lib/x64")
         else()
             #Use 32 bit sdl2 libraries
-            set(SDL2_LIB_DIR "extern/sdl2/msvc/SDL2-2.0.4/lib/x86/")
+            set(SDL2_LIBRARY_DIR "extern/msvc/SDL2-2.0.4/lib/x86")
         endif()
+        set(SDL2_INCLUDE_DIR "extern/msvc/SDL2-2.0.4/include")
         set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-        include_directories("extern/sdl2/msvc/SDL2-2.0.4/include/")
-        link_directories(${SDL2_LIB_DIR})
-        file(COPY "${SDL2_LIB_DIR}SDL2.dll" DESTINATION "${CMAKE_BINARY_DIR}/${EXECUTABLE_OUTPUT_PATH}/Debug")
-        file(COPY "${SDL2_LIB_DIR}SDL2.dll" DESTINATION "${CMAKE_BINARY_DIR}/${EXECUTABLE_OUTPUT_PATH}/Release")
+        set(SDL2_LIBS "SDL2.lib" "SDL2main.lib")
+        file(COPY "${SDL2_LIBRARY_DIR}/SDL2.dll" DESTINATION "${CMAKE_BINARY_DIR}/${EXECUTABLE_OUTPUT_PATH}/Debug")
+        file(COPY "${SDL2_LIBRARY_DIR}/SDL2.dll" DESTINATION "${CMAKE_BINARY_DIR}/${EXECUTABLE_OUTPUT_PATH}/Release")
         set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} /SUBSYSTEM:WINDOWS")
         set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /Od /MDd")
         set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /O2 /Ob2 /Oi /Ot /GL /GS- /MD")
-    endif()
 
-    if(MINGW)
-        include_directories("./extern/sdl2/mingw/SDL2-2.0.4/include/")
-        link_directories("./extern/sdl2/mingw/SDL2-2.0.4/lib/x64/")
+    elseif(MINGW)
+        if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+            #Use 64 bit sdl2 libraries
+            set(SDL2_LIBRARY_DIR "extern/mingw/SDL2-2.0.4/x86_64-w64-mingw32/lib")
+            set(SDL2_INCLUDE_DIR "extern/mingw/SDL2-2.0.4/i686-w64-mingw32/include/SDL2")
+        else()
+            #Use 32 bit sdl2 libraries
+            set(SDL2_LIBRARY_DIR "extern/mingw/SDL2-2.0.4/i686-w64-mingw32/lib")
+            set(SDL2_INCLUDE_DIR "extern/mingw/SDL2-2.0.4/x86_64-w64-mingw32/include/SDL2")
+        endif()
+        set(SDL2_LIBS "mingw32" "SDL2main" "SDL2")
         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -Wall -Werror")
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -mwindows")
+        set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O3")
+        file(COPY "${SDL2_LIBRARY_DIR}/../bin/SDL2.dll" DESTINATION "${CMAKE_BINARY_DIR}")
+    else()
+        message(FATAL_ERROR "Invalid build settings (Use MSVC or MinGW)")
     endif()
 endif()
 
@@ -70,6 +82,8 @@ set(SOURCE_FILES
     src/window.c
     src/window.h)
 
-add_executable(gameboy ${SOURCE_FILES})
-target_link_libraries(gameboy "SDL2.lib" "SDL2main.lib")
-install(TARGETS gameboy DESTINATION bin)
+include_directories(${SDL2_INCLUDE_DIR})
+link_directories(${SDL2_LIBRARY_DIR})
+
+add_executable(Gameboy_Emulator ${SOURCE_FILES})
+target_link_libraries(Gameboy_Emulator ${SDL2_LIBS})
