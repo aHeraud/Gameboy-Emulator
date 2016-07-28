@@ -3,7 +3,7 @@
 
 /*
 Timer Registers:
-FF04 (DIV): Incremented at a rate of 16384Hz, writing to it resets it to 0. (TODO: reset on write)
+FF04 (DIV): Incremented at a rate of 16384Hz, writing to it resets it to 0.
 FF05 (TIMA): Incremented by a clock frequency specified by TAC.
 	When it overflows, it is set to the value in TAC, and 
 	request a timer interrupt.
@@ -11,7 +11,7 @@ FF06 (TMA): Data to load into TIMA when it overflows.
 FF07 (TAC): Controls TIMA, bit 2 = enable, bit 1,0 = speed select.
 */
 
-uint32_t timer_counter;
+uint64_t timer_counter;
 
 void timer_reset() {
 	timer_counter = 0;

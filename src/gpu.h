@@ -5,10 +5,10 @@
 
 #include<stdint.h>
 
-extern const uint8_t GPU_MODE_HBLANK;
-extern const uint8_t GPU_MODE_VBLANK;
-extern const uint8_t GPU_MODE_SEARCH_OAM;
-extern const uint8_t GPU_MODE_TRANSFER;
+#define GPU_MODE_HBLANK  0
+#define GPU_MODE_VBLANK  1
+#define GPU_MODE_SEARCH_OAM  2
+#define GPU_MODE_TRANSFER  3
 
 typedef struct {
 	uint8_t r;

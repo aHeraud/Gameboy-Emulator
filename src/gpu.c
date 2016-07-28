@@ -18,11 +18,6 @@ gpu_t gpu;
 const pixel_t bg_shades[4] = { { 255, 255, 255, 255 }, {170, 170, 170, 255},{ 85, 85, 85, 255 }, { 0, 0, 0, 255 } };
 const pixel_t sprite_shades[4] = { { 255, 255, 255, 255 },{ 170, 170, 170, 255 },{ 85, 85, 85, 255 },{ 0, 0, 0, 255 } };
 
-const uint8_t GPU_MODE_HBLANK = 0;
-const uint8_t GPU_MODE_VBLANK = 1;
-const uint8_t GPU_MODE_SEARCH_OAM = 2;
-const uint8_t GPU_MODE_TRANSFER = 3;
-
 const uint8_t COINCIDENCE_INTERRUPT_ENABLE_MASK = 64;
 const uint8_t OAM_INTERRUPT_ENABLE_MASK = 32;
 const uint8_t VBLANK_INTERRUPT_ENABLE_MASK = 16;
@@ -38,8 +33,21 @@ void gpu_init() {
 
 void gpu_reset() {
 	gpu.clock = 0;
-	memory.io[41] = 0x80;
 	memset(gpu.screen, 0, 160 * 144 * sizeof(pixel_t));
+
+	//Set video registers to the value they are at the end of the boot rom
+	memory.io[0x40] = 0x91;	//LCDC
+	memory.io[0x41] = 0x85;	//LCD STAT
+	memory.io[0x42] = 0x00;	//SCY
+	memory.io[0x43] = 0x00;	//SCX
+	memory.io[0x44] = 0x00;	//LY	TODO: What is value of ly at the end of the bootrom?
+	memory.io[0x45] = 0x00;	//LYC
+	memory.io[0x46] = 0xFF;	//??
+	memory.io[0x47] = 0xFC;	//BGP
+	memory.io[0x48] = 0xFF;	//OBP0
+	memory.io[0x49] = 0xFF;	//OBP1
+	memory.io[0x4A] = 0x00;	//WY
+	memory.io[0x4B] = 0x00;	//WX
 }
 
 /*
@@ -65,56 +73,67 @@ void gpu_step() {
 
 	/**/
 	switch (mode) {
-	case 0:	//H-Blank
+	case GPU_MODE_HBLANK:	//H-Blank
 		if (gpu.clock > 228) {
 			line += 1;
 			gpu.clock = 0;
 
 			if (line >= 144) {
-				mode = 1;
-				//if (stat & VBLANK_INTERRUPT_ENABLE_MASK) 
+				mode = GPU_MODE_VBLANK;
+
+				//VBlank can trigger both VBlank and LCD STAT interrupts
+				//http://gameboy.mongenel.com/dmg/istat98.txt
+
+
 				request_interrupt(VBLANK_INTERRUPT);
+				if(stat & VBLANK_INTERRUPT_ENABLE_MASK)
+					request_interrupt(LCD_STAT_INTERRUPT);
+
 				//Draw frame onto screen
 				window_update();
 			}
 			else {
-				mode = 2;
+				mode = GPU_MODE_SEARCH_OAM;
 				if (stat & OAM_INTERRUPT_ENABLE_MASK)
 					request_interrupt(LCD_STAT_INTERRUPT);
 			}
 		}
 		break;
 
-	case 1:	//V-Blank
+	case GPU_MODE_VBLANK:	//V-Blank
 		if (gpu.clock > 456) {	//4560 / 10
 			line += 1;
 			gpu.clock = 0;
 			if (line >= 153) {
 				line = 0;
-				mode = 2;
-				//if (stat & OAM_INTERRUPT_ENABLE_MASK)
-				request_interrupt(LCD_STAT_INTERRUPT);
+				mode = GPU_MODE_SEARCH_OAM;
+				if (stat & OAM_INTERRUPT_ENABLE_MASK)
+					request_interrupt(LCD_STAT_INTERRUPT);
 			}
 		}
 		break;
 
-	case 2:	//Reading OAM
+	case GPU_MODE_SEARCH_OAM:	//Reading OAM
 		if (gpu.clock > 76) {
 			gpu.clock = 0;
-			mode = 3; //I don't think that this triggers an interrupt
+			mode = GPU_MODE_TRANSFER; //I don't think that this triggers an interrupt
 		}
 		break;
 
-	case 3:	//Reading from OAM and VRAM
+	case GPU_MODE_TRANSFER:	//Reading from OAM and VRAM
 		if (gpu.clock > 152) {
-			mode = 0;
+			mode = GPU_MODE_HBLANK;
 			gpu.clock = 0;
-			//if (stat & HBLANK_INTERRUPT_ENABLE_MASK)
-			request_interrupt(LCD_STAT_INTERRUPT);
+			if (stat & HBLANK_INTERRUPT_ENABLE_MASK)
+				request_interrupt(LCD_STAT_INTERRUPT);
 			gpu_render_scanline();
 		}
 		break;
 	}
+
+	//Check LYC=LY Coincidence interrupt
+	if((stat & COINCIDENCE_INTERRUPT_ENABLE_MASK) && (memory.io[0x44] == memory.io[0x45]))
+		request_interrupt(LCD_STAT_INTERRUPT);
 
 	//Write changes to memory
 	stat = stat | mode;
@@ -275,7 +294,7 @@ inline void draw_sprite(sprite_t sprite, uint8_t line, uint8_t height) {
 		else {
 			value = ((data0 >> (7 - (x % 8)) << 1) & 2) | ((data1 >> (7 - (x % 8))) & 1);	//Color value for current pixel
 		}
-		uint8_t shade = (palette >> (value << 1)) & 3;
+		uint8_t shade = (uint8_t)((palette >> (value << 1)) & 3);
 		pixel_t color = sprite_shades[shade];
 
 		if(value)

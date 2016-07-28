@@ -1,26 +1,10 @@
 #include<stdio.h>
 #include<stdbool.h>
-//#include<stdint.h>
-//#include<assert.h>
+#include<stdint.h>
 #include<SDL.h>
 
 #include"mmu.h"
 #include"emulator.h"
-
-/*
-Tests:
-01-special: Passed
-02-interrupts: Timer doesn't work failed #4
-03-op sp,hl: Passed
-04-op r,imm: Passed
-05-op rp: Passed
-06-ld r,r: Passed
-07-jr,jp,call,ret,rst: Passed
-08-misc instrs: Passed
-09-op r,r: Passed
-10-bit ops: Passed
-11-op a,(hl): Passed
-*/
 
 int main(int argc, char** argv) {
 	const char* rom_file = argv[1];
@@ -37,8 +21,21 @@ int main(int argc, char** argv) {
 
 	emulator_is_running = true;
 
+    //TODO: this doesn't work, need better method to synchronize emulator
+	const uint64_t CPU_FREQ = 4194304;	//DMG cpu freq in Hz
+	uint64_t freq = SDL_GetPerformanceFrequency();	//Frequency of the PerformanceCounter in Hz
+	double step_time = (double)freq / CPU_FREQ;
+    uint64_t last, now;
+
+	last = SDL_GetPerformanceCounter();
     while (emulator_is_running) {
-        emulator_step();
+		now = SDL_GetPerformanceCounter();
+		uint64_t delta = now - last;
+		while(delta > step_time) {
+			emulator_step();
+			delta -= step_time;
+		}
+		last = now + delta;
 	}
 	
 	return 0;

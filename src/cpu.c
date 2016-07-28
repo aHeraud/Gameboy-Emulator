@@ -49,7 +49,7 @@ void cpu_step() {
 		opcode = read_byte(cpu.registers.pc++);
 		void(*execute)(void) = extended_instructions[opcode].func;
 		execute();
-		cpu.cycle_counter = extended_instruction_cycles[opcode];
+		cpu.cycle_counter += extended_instruction_cycles[opcode];
 	}
 	else {
 		length = instructions[opcode].length;
@@ -73,7 +73,8 @@ void cpu_step() {
 			//Invalid
 			assert(false);
 		}
-		cpu.cycle_counter = instruction_cycles[opcode];	//Do this after the instruction executes because they have variable timings
+		cpu.cycle_counter += instruction_cycles[opcode];	//Do this after the instruction executes because they have variable timings
+
 	}
 }
 
@@ -109,6 +110,9 @@ uint16_t pop() {
 }
 
 void request_interrupt(uint8_t interrupt_mask) {
+	//Requesting an interrupt disables halt, it doesn't actually have to proccess the  interrupts
+	cpu.halt = false;
+
 	uint8_t requested_interrupts = read_byte(0xFF0F);
 	requested_interrupts |= interrupt_mask;
 	requested_interrupts &= 0x1F;
@@ -118,12 +122,15 @@ void request_interrupt(uint8_t interrupt_mask) {
 bool interrupt_service_routine() {
 	//According to http://gbdev.gg8.se/wiki/articles/Interrupts,
 	//the isr should consume a total of 5 machine cycles
+	//When an enabled interrupt is requested, the cpu clears the flag and does an action similar
+	//to DI; CALL(<INT>)
 	//TODO: Add masks for interrupts
 	if (cpu.ime) {
 		uint8_t requested_interrupts = ((read_byte(0xFFFF) & 0x1F) & (read_byte(0xFF0F) & 0x1F));
 		if (!requested_interrupts)	return false;
 
 		cpu.halt = false;
+		cpu.ime = false;    //Nested interrupts have to be enabled by an EI instruction inside the current interrupt vector
 		push(cpu.registers.pc);
 
 		if (requested_interrupts & VBLANK_INTERRUPT) {

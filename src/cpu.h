@@ -66,7 +66,7 @@ typedef struct {
 	registers_t registers;
 	bool ime;
 	bool halt, stop;
-	unsigned int cycle_counter;
+	int cycle_counter;
 } cpu_t;
 
 extern cpu_t cpu;
