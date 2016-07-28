@@ -21,10 +21,9 @@ int main(int argc, char** argv) {
 
 	emulator_is_running = true;
 
-    //TODO: this doesn't work, need better method to synchronize emulator
-	const uint64_t CPU_FREQ = 4194304;	//DMG cpu freq in Hz
-	uint64_t freq = SDL_GetPerformanceFrequency();	//Frequency of the PerformanceCounter in Hz
-	double step_time = (double)freq / CPU_FREQ;
+	const uint64_t CPU_FREQ = 4194304 / 4;
+	uint64_t freq = SDL_GetPerformanceFrequency();
+	double step_time = ((double)freq / CPU_FREQ);
     uint64_t last, now;
 
 	last = SDL_GetPerformanceCounter();
@@ -34,8 +33,8 @@ int main(int argc, char** argv) {
 		while(delta > step_time) {
 			emulator_step();
 			delta -= step_time;
+			last += step_time;
 		}
-		last = now + delta;
 	}
 	
 	return 0;

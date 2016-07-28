@@ -25,27 +25,29 @@ void cpu_step() {
 	serial_update();
 	joypad_update();
 
-	if (cpu.cycle_counter) {
-		cpu.cycle_counter -= 1;
+	cpu.cycle_counter -= 1;
+
+	if (cpu.cycle_counter > 0) {
 		return;
 	}
 
 	if (interrupt_service_routine())
 		return;
 
-	if (cpu.halt)
+	if (cpu.halt) {
+		cpu.cycle_counter += instruction_cycles[0x76];
 		return;
+	}
+
 
 	/*Read next opcode*/
 	uint8_t opcode;
-	//uint8_t prefix = 0;
 	uint8_t length = 0;
 	uint8_t op8 = 0;
 	uint16_t op16 = 0;
 
 	opcode = read_byte(cpu.registers.pc++);
 	if (opcode == 0xCB) {
-		//prefix = opcode;
 		opcode = read_byte(cpu.registers.pc++);
 		void(*execute)(void) = extended_instructions[opcode].func;
 		execute();
@@ -73,8 +75,8 @@ void cpu_step() {
 			//Invalid
 			assert(false);
 		}
-		cpu.cycle_counter += instruction_cycles[opcode];	//Do this after the instruction executes because they have variable timings
 
+		cpu.cycle_counter += instruction_cycles[opcode];
 	}
 }
 
@@ -91,20 +93,18 @@ void cpu_reset() {
 
 //Push a word on to the stack
 void push(uint16_t op16) {
-	uint8_t low = op16 & 255;
-	uint8_t high = (op16 >> 8) & 255;
-	write_byte(cpu.registers.sp - 1, high);
-	write_byte(cpu.registers.sp - 2, low);
-	cpu.registers.sp -= 2;
+	uint8_t low = op16 & 0xFF;
+	uint8_t high = (op16 >> 8) & 0xFF;
+	write_byte(--cpu.registers.sp, high);
+	write_byte(--cpu.registers.sp, low);
 }
 
 //Pop a word off of the stack
 uint16_t pop() {
 	uint8_t low;
 	uint8_t high;
-	low = read_byte(cpu.registers.sp);
-	high = read_byte(cpu.registers.sp + 1);
-	cpu.registers.sp += 2;
+	low = read_byte(cpu.registers.sp++);
+	high = read_byte(cpu.registers.sp++);
 	uint16_t val = (high << 8) | low;
 	return val;
 }
@@ -127,7 +127,8 @@ bool interrupt_service_routine() {
 	//TODO: Add masks for interrupts
 	if (cpu.ime) {
 		uint8_t requested_interrupts = ((read_byte(0xFFFF) & 0x1F) & (read_byte(0xFF0F) & 0x1F));
-		if (!requested_interrupts)	return false;
+
+        if (!requested_interrupts)	return false;
 
 		cpu.halt = false;
 		cpu.ime = false;    //Nested interrupts have to be enabled by an EI instruction inside the current interrupt vector
@@ -163,7 +164,7 @@ bool interrupt_service_routine() {
 			cpu.registers.pc = 0x60;
 		}
 
-		cpu.cycle_counter = 5;
+		cpu.cycle_counter += 5;
 		return true;
 	}
 	else {

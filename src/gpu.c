@@ -69,7 +69,8 @@ void gpu_step() {
 
 	stat = stat & 0b01111000;	//Clear coincidence flag and mode
 
-	gpu.clock += 1;
+	//gpu.clock += 1;
+	gpu.clock += 4;	//Called every 4 clock cycles, all timings should be multiples of 4
 
 	/**/
 	switch (mode) {
@@ -131,9 +132,13 @@ void gpu_step() {
 		break;
 	}
 
-	//Check LYC=LY Coincidence interrupt
-	if((stat & COINCIDENCE_INTERRUPT_ENABLE_MASK) && (memory.io[0x44] == memory.io[0x45]))
-		request_interrupt(LCD_STAT_INTERRUPT);
+	//Check LYC=LY Coincidence interrupt (already cleared the flag from last tick)
+	if(memory.io[0x44] == memory.io[0x45]) {
+		stat |= 4;
+		if((stat & COINCIDENCE_INTERRUPT_ENABLE_MASK))
+			request_interrupt(LCD_STAT_INTERRUPT);
+	}
+
 
 	//Write changes to memory
 	stat = stat | mode;

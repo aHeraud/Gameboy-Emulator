@@ -1,7 +1,4 @@
 #include"register8.h"
-#include<stdint.h>
-
-#include<stdio.h>
 
 const uint8_t ZF_MASK = 128;
 const uint8_t SF_MASK = 64;

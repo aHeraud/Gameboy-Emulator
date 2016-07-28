@@ -26,6 +26,9 @@ HRAM	: FF80 - FFFE  =  ‭1111111110000000‬ - ‭1111111111111110‬
 IER		: FFFF - FFFF  =  1111111111111111 - ‭1111111111111111
 -----------------------------------------------------------*/
 
+//TODO: make low 3 bits of stat read only
+//TODO: don't need to completely implement read_byte and write_byte for each mmu, only for rom and ram access
+
 int mmu_init() {
 	//Lazily allocate the max ammount of space for the rom (256 16KB banks), and ram (16 banks of 8K). (MBC1 values)
 	//TODO: read cartridge header to decide how much space to allocate to store rom
@@ -96,7 +99,7 @@ int save_ram() {
 }
 
 void dma(uint8_t start_addr) {
-	//TODO: don't do this all in the same tick?
+	//TODO: set a flag and only allow cpu to access hram until the is "over"
 	if (start_addr > 0xF1)
 		return;
 	else {
@@ -133,7 +136,7 @@ void mmu_reset() {
 	write_byte(0xFF24, 0x77);
 	write_byte(0xFF25, 0xF3);
 	write_byte(0xFF26, 0xF1);
-	write_byte(0xFF4D, 0x7E);	//maybe? (TODO:check)
+	write_byte(0xFF4D, 0x7E);	//maybe?
 	write_byte(0xFFFF, 0x00);	//IE
 }
 

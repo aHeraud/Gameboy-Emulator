@@ -1,3 +1,5 @@
+#include<stdbool.h>
+
 #include"timer.h"
 #include"cpu.h"
 
@@ -11,6 +13,8 @@ FF06 (TMA): Data to load into TIMA when it overflows.
 FF07 (TAC): Controls TIMA, bit 2 = enable, bit 1,0 = speed select.
 */
 
+//TODO: implement obscure behavior referenced in http://gbdev.gg8.se/wiki/articles/Timer_Obscure_Behaviour
+
 uint64_t timer_counter;
 
 void timer_reset() {
@@ -18,7 +22,7 @@ void timer_reset() {
 }
 
 void timer_update() {
-	timer_counter += 1;
+	timer_counter += 4;	//update is only called every 4 cycles
 	uint8_t tac = memory.io[0x07];
 
 	if (timer_counter % 256 == 0) {
@@ -29,26 +33,26 @@ void timer_update() {
 	if (tac & 4) {
 		//Timer is enabled
 		tac &= 3;
-		uint8_t did_increment = 0;
+		bool should_increment = false;
 		switch (tac) {
 		case 0:
 			//clock/1024
 			if (timer_counter % 1024 == 0) {
-				did_increment = 1;
+				should_increment = true;
 			}
 			break;
 
 		case 1:
 			//clock/16
 			if (timer_counter % 16 == 0) {
-				did_increment = 1;
+				should_increment = true;
 			}
 			break;
 
 		case 2:
 			//clock/64
 			if (timer_counter % 64 == 0) {
-				did_increment = 1;
+				should_increment = true;
 			}
 				
 			break;
@@ -56,12 +60,12 @@ void timer_update() {
 		case 3:
 			//clock/256
 			if (timer_counter % 256 == 0) {
-				did_increment = 1;
+				should_increment = true;
 			}
 			break;
 		}
 
-		if (did_increment) {
+		if (should_increment == true) {
 			memory.io[0x05] += 1;
 			if (memory.io[0x05] == 0) {
 				//Timer overflowed
@@ -71,5 +75,4 @@ void timer_update() {
 			}
 		}
 	}
-
 }

@@ -4,26 +4,62 @@
 #include"register8.h"
 #include"register16.h"
 
-#include<assert.h>
-
+//Instruction cycle tables from the readme of blargg's instr_timing test rom
 uint8_t instruction_cycles[256] = {
-	/*		 0   1   2   3   4   5   6   7   8   9   A   B   C   D   E   F	*/
-	/*0*/	 4, 12,  8,  8,  4,  4,  8,  4, 20,  8,  8,  8,  4,  4,  8,  4,
-	/*1*/	 4, 12,  8,  8,  4,  4,  8,  4, 12,  8,  8,  8,  4,  4,  8,  4,
-	/*2*/	12, 12,  8,  8,  4,  4,  8,  4, 12,  8,  8,  8,  4,  4,  8,  4,
-	/*3*/	12, 12,  8,  8, 12, 12, 12,  4, 12,  8,  8,  8,  4,  4,  8,  4,
-	/*4*/	 4,  4,  4,  4,  4,  4,  8,  4,  4,  4,  4,  4,  4,  4,  8,  4,
-	/*5*/	 4,  4,  4,  4,  4,  4,  8,  4,  4,  4,  4,  4,  4,  4,  8,  4,
-	/*6*/	 4,  4,  4,  4,  4,  4,  8,  4,  4,  4,  4,  4,  4,  4,  8,  4,
-	/*7*/	 8,  8,  8,  8,  8,  8,  4,  8,  4,  4,  4,  4,  4,  4,  8,  4,
-	/*8*/	 4,  4,  4,  4,  4,  4,  8,  4,  4,  4,  4,  4,  4,  4,  8,  4,
-	/*9*/	 4,  4,  4,  4,  4,  4,  8,  4,  4,  4,  4,  4,  4,  4,  8,  4,
-	/*A*/	 4,  4,  4,  4,  4,  4,  8,  4,  4,  4,  4,  4,  4,  4,  8,  4,
-	/*B*/	 4,  4,  4,  4,  4,  4,  8,  4,  4,  4,  4,  4,  4,  4,  8,  4,
-	/*C*/	20, 12, 16, 16, 24, 16,  8, 16, 20, 16, 16,  4, 24, 24,  8, 16,
-	/*D*/	20, 12, 16,  0, 24, 16,  8, 16, 20, 16, 16,  0, 24,  0,  8, 16,
-	/*E*/	12, 12,  8,  0,  0, 16,  8, 16, 16,  4, 16,  0,  0,  0,  8, 16,
-	/*F*/	12, 12,  8,  4,  0, 16,  8, 16, 12,  8, 16,  4,  0,  0,  8, 16
+		1,3,2,2,1,1,2,1,5,2,2,2,1,1,2,1,
+		0,3,2,2,1,1,2,1,3,2,2,2,1,1,2,1,
+		2,3,2,2,1,1,2,1,2,2,2,2,1,1,2,1,
+		2,3,2,2,3,3,3,1,2,2,2,2,1,1,2,1,
+		1,1,1,1,1,1,2,1,1,1,1,1,1,1,2,1,
+		1,1,1,1,1,1,2,1,1,1,1,1,1,1,2,1,
+		1,1,1,1,1,1,2,1,1,1,1,1,1,1,2,1,
+		2,2,2,2,2,2,0,2,1,1,1,1,1,1,2,1,
+		1,1,1,1,1,1,2,1,1,1,1,1,1,1,2,1,
+		1,1,1,1,1,1,2,1,1,1,1,1,1,1,2,1,
+		1,1,1,1,1,1,2,1,1,1,1,1,1,1,2,1,
+		1,1,1,1,1,1,2,1,1,1,1,1,1,1,2,1,
+		2,3,3,4,3,4,2,4,2,4,3,0,3,6,2,4,
+		2,3,3,0,3,4,2,4,2,4,3,0,3,0,2,4,
+		3,3,2,0,0,4,2,4,4,1,4,0,0,0,2,4,
+		3,3,2,1,0,4,2,4,3,2,4,1,0,0,2,4
+};
+
+const uint8_t instruction_cycles_when_conditionals_not_taken[256] = {
+		1,3,2,2,1,1,2,1,5,2,2,2,1,1,2,1,
+		0,3,2,2,1,1,2,1,3,2,2,2,1,1,2,1,
+		2,3,2,2,1,1,2,1,2,2,2,2,1,1,2,1,
+		2,3,2,2,3,3,3,1,2,2,2,2,1,1,2,1,
+		1,1,1,1,1,1,2,1,1,1,1,1,1,1,2,1,
+		1,1,1,1,1,1,2,1,1,1,1,1,1,1,2,1,
+		1,1,1,1,1,1,2,1,1,1,1,1,1,1,2,1,
+		2,2,2,2,2,2,0,2,1,1,1,1,1,1,2,1,
+		1,1,1,1,1,1,2,1,1,1,1,1,1,1,2,1,
+		1,1,1,1,1,1,2,1,1,1,1,1,1,1,2,1,
+		1,1,1,1,1,1,2,1,1,1,1,1,1,1,2,1,
+		1,1,1,1,1,1,2,1,1,1,1,1,1,1,2,1,
+		2,3,3,4,3,4,2,4,2,4,3,0,3,6,2,4,
+		2,3,3,0,3,4,2,4,2,4,3,0,3,0,2,4,
+		3,3,2,0,0,4,2,4,4,1,4,0,0,0,2,4,
+		3,3,2,1,0,4,2,4,3,2,4,1,0,0,2,4
+};
+
+const uint8_t instruction_cycles_when_conditionals_taken[] = {
+		1,3,2,2,1,1,2,1,5,2,2,2,1,1,2,1,
+		0,3,2,2,1,1,2,1,3,2,2,2,1,1,2,1,
+		3,3,2,2,1,1,2,1,3,2,2,2,1,1,2,1,
+		3,3,2,2,3,3,3,1,3,2,2,2,1,1,2,1,
+		1,1,1,1,1,1,2,1,1,1,1,1,1,1,2,1,
+		1,1,1,1,1,1,2,1,1,1,1,1,1,1,2,1,
+		1,1,1,1,1,1,2,1,1,1,1,1,1,1,2,1,
+		2,2,2,2,2,2,0,2,1,1,1,1,1,1,2,1,
+		1,1,1,1,1,1,2,1,1,1,1,1,1,1,2,1,
+		1,1,1,1,1,1,2,1,1,1,1,1,1,1,2,1,
+		1,1,1,1,1,1,2,1,1,1,1,1,1,1,2,1,
+		1,1,1,1,1,1,2,1,1,1,1,1,1,1,2,1,
+		5,3,4,4,6,4,2,4,5,4,4,0,6,6,2,4,
+		5,3,4,0,6,4,2,4,5,4,4,0,6,0,2,4,
+		3,3,2,0,0,4,2,4,4,1,4,0,0,0,2,4,
+		3,3,2,1,0,4,2,4,3,2,4,1,0,0,2,4
 };
 
 /*Regular Instructions*/
@@ -449,13 +485,14 @@ void rra() {
 
 //0x2x
 void jr_nz_r8(uint8_t op8) {
+	//opcode 0x20
 	//Jump if zf is clear
 	if (!(cpu.registers.f & ZF_MASK)) {
 		jr_r8(op8);
-		instruction_cycles[0x20] = 12;
+		instruction_cycles[0x20] = instruction_cycles_when_conditionals_taken[0x20];
 	}
 	else {
-		instruction_cycles[0x20] = 8;
+		instruction_cycles[0x20] = instruction_cycles_when_conditionals_not_taken[0x20];
 	}
 }
 
@@ -517,13 +554,14 @@ void daa() {
 }
 
 void jr_z_r8(uint8_t op8) {
+	//opcode 0x28
 	//Jump if zf is set
 	if (cpu.registers.f & ZF_MASK) {
 		jr_r8(op8);
-		instruction_cycles[0x20] = 12;
+		instruction_cycles[0x28] = instruction_cycles_when_conditionals_taken[0x28];
 	}
 	else {
-		instruction_cycles[0x20] = 8;
+		instruction_cycles[0x28] = instruction_cycles_when_conditionals_not_taken[0x28];
 	}
 }
 
@@ -562,13 +600,14 @@ void cpl() {
 
 //$3x
 void jr_nc_r8(uint8_t op8) {
+	//opcode 0x30
 	//Jump if cf is clear
 	if (!(cpu.registers.f & CF_MASK)) {
 		jr_r8(op8);
-		instruction_cycles[0x20] = 12;
+		instruction_cycles[0x30] = instruction_cycles_when_conditionals_taken[0x30];
 	}
 	else {
-		instruction_cycles[0x20] = 8;
+		instruction_cycles[0x30] = instruction_cycles_when_conditionals_not_taken[0x30];
 	}
 }
 
@@ -610,13 +649,14 @@ void scf() {
 }
 
 void jr_c_r8(uint8_t op8) {
+	//opcode 0x38
 	//Jump if carry is set
 	if (cpu.registers.f & CF_MASK) {
 		jr_r8(op8);
-		instruction_cycles[0x20] = 12;
+		instruction_cycles[0x38] = instruction_cycles_when_conditionals_taken[0x38];
 	}
 	else {
-		instruction_cycles[0x20] = 8;
+		instruction_cycles[0x38] = instruction_cycles_when_conditionals_not_taken[0x38];
 	}
 }
 
@@ -1186,13 +1226,14 @@ void cp_a() {
 
 //$Cx
 void ret_nz() {
+	//opcode 0xC0
 	//ret if zf is clear
 	if (!(cpu.registers.f & ZF_MASK)) {
 		ret();
-		instruction_cycles[0xC0] = 20;
+		instruction_cycles[0xC0] = instruction_cycles_when_conditionals_taken[0xC0];
 	}
 	else {
-		instruction_cycles[0xC0] = 8;
+		instruction_cycles[0xC0] = instruction_cycles_when_conditionals_not_taken[0xC0];
 	}
 }
 
@@ -1201,12 +1242,13 @@ void pop_bc() {
 }
 
 void jp_nz_a16(uint16_t op16) {
+	//opcode 0xC2
 	if (!(cpu.registers.f & ZF_MASK)) {
 		jp_a16(op16);
-		instruction_cycles[0xC2] = 16;
+		instruction_cycles[0xC2] = instruction_cycles_when_conditionals_taken[0xC2];
 	}
 	else {
-		instruction_cycles[0xC2] = 12;
+		instruction_cycles[0xC2] = instruction_cycles_when_conditionals_not_taken[0xC2];
 	}
 }
 
@@ -1215,12 +1257,13 @@ void jp_a16(uint16_t op16) {
 }
 
 void call_nz_a16(uint16_t op16) {
+	//opcode 0xC4
 	if (!(cpu.registers.f & ZF_MASK)) {
 		call_a16(op16);
-		instruction_cycles[0xC4] = 24;
+		instruction_cycles[0xC4] = instruction_cycles_when_conditionals_taken[0xC4];
 	}
 	else {
-		instruction_cycles[0xC4] = 12;
+		instruction_cycles[0xC4] = instruction_cycles_when_conditionals_not_taken[0xC4];
 	}
 }
 
@@ -1237,12 +1280,13 @@ void rst_00h() {
 }
 
 void ret_z() {
+	//opcode 0xC8
 	if (cpu.registers.f & ZF_MASK) {
 		ret();
-		instruction_cycles[0xC8] = 20;
+		instruction_cycles[0xC8] = instruction_cycles_when_conditionals_taken[0xC8];
 	}
 	else {
-		instruction_cycles[0xC8] = 8;
+		instruction_cycles[0xC8] = instruction_cycles_when_conditionals_not_taken[0xC8];
 	}
 }
 
@@ -1251,24 +1295,26 @@ void ret() {
 }
 
 void jp_z_a16(uint16_t op16) {
+	//opcode 0xCA
 	if (cpu.registers.f & ZF_MASK) {
 		jp_a16(op16);
-		instruction_cycles[0xCA] = 16;
+		instruction_cycles[0xCA] = instruction_cycles_when_conditionals_taken[0xCA];
 	}
 	else {
-		instruction_cycles[0xCA] = 12;
+		instruction_cycles[0xCA] = instruction_cycles_when_conditionals_not_taken[0xCA];
 	}
 }
 
 //PREFIX CB: INVALID
 
 void call_z_a16(uint16_t op16) {
+	//opcode 0xCC
 	if(cpu.registers.f & ZF_MASK) {
 		call_a16(op16);
-		instruction_cycles[0xCC] = 20;
+		instruction_cycles[0xCC] = instruction_cycles_when_conditionals_taken[0xCC];
 	}
 	else {
-		instruction_cycles[0xCC] = 12;
+		instruction_cycles[0xCC] = instruction_cycles_when_conditionals_not_taken[0xCC];
 	}
 }
 
@@ -1287,12 +1333,13 @@ void rst_08h() {
 
 //$Dx
 void ret_nc() {
+	//opcode 0xD0
 	if (!(cpu.registers.f & CF_MASK)) {
 		ret();
-		instruction_cycles[0xD0] = 20;
+		instruction_cycles[0xD0] = instruction_cycles_when_conditionals_taken[0xD0];
 	}
 	else {
-		instruction_cycles[0xD0] = 8;
+		instruction_cycles[0xD0] = instruction_cycles_when_conditionals_not_taken[0xD0];
 	}
 }
 
@@ -1301,24 +1348,26 @@ void pop_de() {
 }
 
 void jp_nc_a16(uint16_t op16) {
+	//opcode 0xD2
 	if (!(cpu.registers.f & CF_MASK)) {
 		jp_a16(op16);
-		instruction_cycles[0xD2] = 16;
+		instruction_cycles[0xD2] = instruction_cycles_when_conditionals_taken[0xD2];
 	}
 	else {
-		instruction_cycles[0xD2] = 12;
+		instruction_cycles[0xD2] = instruction_cycles_when_conditionals_not_taken[0xD2];
 	}
 }
 
 //0xD3: INVALID
 
 void call_nc_a16(uint16_t op16) {
+	//opcode 0xD4
 	if (!(cpu.registers.f & CF_MASK)) {
 		call_a16(op16);
-		instruction_cycles[0xD4] = 24;
+		instruction_cycles[0xD4] = instruction_cycles_when_conditionals_taken[0xD4];
 	}
 	else {
-		instruction_cycles[0xD4] = 12;
+		instruction_cycles[0xD4] = instruction_cycles_when_conditionals_not_taken[0xD4];
 	}
 }
 
@@ -1335,12 +1384,13 @@ void rst_10h() {
 }
 
 void ret_c() {
+	//opcode 0xD8
 	if (cpu.registers.f & CF_MASK) {
 		ret();
-		instruction_cycles[0xD8] = 20;
+		instruction_cycles[0xD8] = instruction_cycles_when_conditionals_taken[0xD8];
 	}
 	else {
-		instruction_cycles[0xD8] = 8;
+		instruction_cycles[0xD8] = instruction_cycles_when_conditionals_not_taken[0xD8];
 	}
 }
 
@@ -1350,24 +1400,26 @@ void reti() {
 }
 
 void jp_c_a16(uint16_t op16) {
+	//opcode 0xDA
 	if (cpu.registers.f & CF_MASK) {
 		jp_a16(op16);
-		instruction_cycles[0xDA] = 16;
+		instruction_cycles[0xDA] = instruction_cycles_when_conditionals_taken[0xDA];
 	}
 	else {
-		instruction_cycles[0xDA] = 12;
+		instruction_cycles[0xDA] = instruction_cycles_when_conditionals_taken[0xDA];
 	}
 }
 
 //0xDB: INVALID
 
 void call_c_a16(uint16_t op16) {
+	//opcode 0xDC
 	if(cpu.registers.f & CF_MASK) {
 		call_a16(op16);
-		instruction_cycles[0xDC] = 24;
+		instruction_cycles[0xDC] = instruction_cycles_when_conditionals_taken[0xDC];
 	}
 	else {
-		instruction_cycles[0xDC] = 12;
+		instruction_cycles[0xDC] = instruction_cycles_when_conditionals_not_taken[0xDC];
 	}
 }
 

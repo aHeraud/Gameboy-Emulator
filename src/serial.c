@@ -11,7 +11,7 @@ void serial_reset() {
 	memory.io[2] = 0;
 }
 
-/* Used to write bytes from the serial port to the console for blargg's cpu test roms */
+/* Used to write bytes from the serial port to the console for blargg's test roms */
 void serial_update() {
 		
 	uint8_t sc = memory.io[2];
