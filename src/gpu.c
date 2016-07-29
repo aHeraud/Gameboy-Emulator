@@ -188,6 +188,9 @@ void draw_bg() {
 
 		if (window_enabled && (x >= wx)) {
 			map_address = window_tile_map + ((x - wx) / 8) + (((line - wy) / 8) * 32);
+			//Window doesn't scroll
+			xPos = x;
+			yPos = line;
 		}
 		else if(lcdc & 1) {
 			//BG enabled
