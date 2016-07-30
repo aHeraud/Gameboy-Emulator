@@ -2,11 +2,11 @@
 
 #include<stdint.h>
 #include<string.h>
+#include <assert.h>
 
 #include"mmu.h"
 #include"cpu.h"
 #include"window.h"
-
 
 /*
 Using the Pan Docs as a reference
@@ -202,7 +202,9 @@ void draw_bg() {
 			continue;
 		}
 		
-		tile_number = read_byte(map_address);
+		//tile_number = read_byte(map_address);
+		assert((map_address - 0x8000) < 0x2000);	//bounds check
+		tile_number = memory.vram[map_address - 0x8000];
 		if (tile_data == 0x8800) {
 			//Convert from signed tile numbers into unsigned offset
 			tile_number += 128;
@@ -210,8 +212,11 @@ void draw_bg() {
 
 		//Read tile
 		tile_address = tile_data + (tile_number * 16) + ((yPos % 8) * 2);
-		uint8_t tile_2 = read_byte(tile_address);
-		uint8_t tile_1 = read_byte(tile_address + 1);
+		//uint8_t tile_2 = read_byte(tile_address);
+		//uint8_t tile_1 = read_byte(tile_address + 1);
+		assert((map_address + 1 - 0x8000) < 0x2000);	//bounds checking
+		uint8_t tile_2 = memory.vram[tile_address - 0x8000];
+		uint8_t tile_1 = memory.vram[tile_address + 1 - 0x8000];
 
 		uint8_t value = ((tile_1 >> (7 - (xPos % 8)) << 1) & 2) | ((tile_2 >> (7 - (xPos % 8))) & 1);	//Color value for current pixel
 		uint8_t shade = (bgp >> (value << 1)) & 3;
@@ -219,10 +224,6 @@ void draw_bg() {
 
 		if (shade || gpu.screen[x + (line * 160)].a == 0)
 			gpu.screen[x + (line * 160)] = color;
-
-
-		
-		
 	}
 }
 
@@ -271,8 +272,13 @@ inline void draw_sprite(sprite_t sprite, uint8_t line, uint8_t height) {
 	bool y_flip = sprite.options & 0x40 ? true : false;
 	uint16_t tile_address = sprite.tile_number * 16 + 0x8000;
 	uint16_t lower_tile_address = (sprite.tile_number | 1) * 16 + 0x8000;
-	uint8_t palette = read_byte((sprite.options & 0x10) ? 0xFF49 : 0xFF48);	//Remember low 2 bits are not used (transparent)
-	
+	//uint8_t palette = read_byte((sprite.options & 0x10) ? 0xFF49 : 0xFF48);	//Remember low 2 bits are not used (transparent)
+	uint8_t palette;
+	if((sprite.options & 0x10) == 0x10)
+		palette = memory.io[0x49];
+	else
+		palette = memory.io[0x48];
+
 	int y = line - sprite.y;
 	if (y < 0 || y >= height)
 		return;	//not on this line
@@ -283,12 +289,20 @@ inline void draw_sprite(sprite_t sprite, uint8_t line, uint8_t height) {
 	if (y >= 8) tile_address = lower_tile_address;
 
 	if (y_flip) {
-		data0 = read_byte(tile_address + 1 + (((height - y) % 8) * 2));
-		data1 = read_byte(tile_address + (((height - y) % 8) * 2));
+		assert(tile_address + 1 + (((height - y) % 8) * 2) - 0x8000 < 0x2000);
+		assert(tile_address + (((height - y) % 8) * 2) - 0x8000 < 0x2000);
+		//data0 = read_byte(tile_address + 1 + (((height - y) % 8) * 2));
+		//data1 = read_byte(tile_address + (((height - y) % 8) * 2));
+		data0 = memory.vram[tile_address + 1 + (((height - y) % 8) * 2) - 0x8000];
+		data1 = memory.vram[tile_address + (((height - y) % 8) * 2) - 0x8000];
 	}
 	else {
-		data0 = read_byte(tile_address + 1 + ((y % 8) * 2));
-		data1 = read_byte(tile_address + ((y % 8) * 2));
+		assert(tile_address + 1 + ((y % 8) * 2) - 0x8000 < 0x2000);
+		assert(tile_address + ((y % 8) * 2) - 0x8000 < 0x2000);
+		//data0 = read_byte(tile_address + 1 + ((y % 8) * 2));
+		//data1 = read_byte(tile_address + ((y % 8) * 2));
+		data0 = memory.vram[tile_address + 1 + ((y % 8) * 2) - 0x8000];
+		data1 = memory.vram[tile_address + ((y % 8) * 2) - 0x8000];
 	}
 
 	for (int x = 0; x < 8; ++x) {

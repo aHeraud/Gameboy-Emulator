@@ -51,6 +51,6 @@ void write_byte(uint16_t address, uint8_t value);
 /*Loads rom file, returns 0 on success*/
 int load_rom(const char* rom_file);
 int load_ram(const char* ram_file);
-int save_ram();
+int save_ram(const char* ram_file);
 
 #endif

@@ -1,6 +1,7 @@
 #include<stdio.h>
 #include<stdbool.h>
 #include<stdint.h>
+#include<string.h>
 #include<SDL.h>
 
 #include"mmu.h"
@@ -18,6 +19,19 @@ int main(int argc, char** argv) {
 		printf("Error: Failed to read rom\n");
 		return 1;
 	}
+
+	//try to see if there is a save
+	size_t len = strlen(rom_file) + 5;	//leave room for ".sav\0"
+	char save[len];
+	memset(save, 0, len);
+	memcpy(save, rom_file, strlen(rom_file));
+	char* ptr = strrchr(save, '.');
+	if(!ptr) {
+		ptr = save + len - 5;
+		save[len - 5] = '.';
+	}
+	memcpy(ptr + 1, "sav\0", 4);
+	load_ram(save);
 
 	emulator_is_running = true;
 

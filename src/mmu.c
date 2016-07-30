@@ -1,6 +1,7 @@
 #include<stdio.h>
 #include<stdlib.h>	//For malloc
 #include<assert.h>
+#include<string.h>
 #include"mmu.h"
 
 #include"mbc1.h"
@@ -27,11 +28,69 @@ IER		: FFFF - FFFF  =  1111111111111111 - ‭1111111111111111
 -----------------------------------------------------------*/
 
 //TODO: make low 3 bits of stat read only
-//TODO: don't need to completely implement read_byte and write_byte for each mmu, only for rom and ram access
+
+//helpers
+size_t load_file(const char* path, uint8_t *buffer, int length) {
+	FILE* file = fopen(path, "rb");
+	if (file == NULL) {
+		//failed to open file for reading
+		return 0;
+	}
+
+	size_t size = fread(buffer, sizeof(uint8_t), length, file);
+	fclose(file);
+	return size;
+}
+
+size_t get_cart_ram_size() {
+	uint8_t ram_size = read_byte(0x0149);	//read ram size from cartridge header
+	switch(ram_size) {
+		case 0:
+			if(mmu_info.mbc_type == MBC2)
+				return 512;	//mbc2 has 512x4-bits of ram
+			else
+				return 0;
+		case 1:
+			return 0x800;    //2KB
+		case 2:
+			return 0x2000;  //8KB
+		case 3:
+			return 0x8000;  //32KB
+		case 4:
+			return 0x20000; //128KB
+		case 5:
+			return 0x1000;  //64KB
+		default:
+			return 0;	//invalid entry in header
+	}
+}
+
+bool cart_has_battery() {
+	uint8_t capabilities = memory.cart_rom[0x147];
+	switch(capabilities) {
+		case 3:
+		case 6:
+		case 8:
+		case 0x0D:
+		case 0x0F:
+		case 0x10:
+		case 0x13:
+		case 0x17:
+		case 0x1B:
+		case 0x1E:
+		case 0x22:
+		case 0xFF:
+			return true;
+		default:
+			return false;
+	}
+}
+
+
 
 int mmu_init() {
 	//Lazily allocate the max amount of space for the rom (256 16KB banks), and ram (16 banks of 8K). (MBC1 values)
-	//TODO: read cartridge header to decide how much space to allocate to store rom
+	//TODO: read cartridge header to decide how much space to allocate to store rom (same for ram)
 	memory.cart_rom = (uint8_t *)malloc(256 * 0x4000 * sizeof(uint8_t));
 	if (!memory.cart_rom)
 		return -1;
@@ -39,6 +98,8 @@ int mmu_init() {
 	memory.cart_ram = (uint8_t *)malloc(16 * 0x2000 * sizeof(uint8_t));
 	if (!memory.cart_ram)
 		return -1;
+
+
 
 	mmu_reset();
 
@@ -56,32 +117,10 @@ void mmu_destroy() {
 	}
 }
 
-/*
-size_t load_file(const char* path, uint8_t *buffer, int length) {
-	FILE* file = fopen(path, "r");
-	if (file == NULL) {
-		//failed to open file for reading
-		return 0;
-	}
-
-	return fread(buffer, sizeof(uint8_t), length, file);
-}
-*/
-
 int load_rom(const char* rom_file) {
-
-	FILE* rom = fopen(rom_file, "r");
-	if (rom == NULL) {
-		//failed to open file for reading
-		return -1;
-	}
-	mmu_info.rom_file_size = fread(memory.cart_rom, sizeof(uint8_t), (256 * 0x4000), rom);
-
-	/*
-	size_t size = load_file(rom_file, memory.cart_rom, (256 * 0x4000));
+	size_t size = load_file(rom_file, memory.cart_rom, (256 * 0x4000));\
 	if(size == 0 || size < 0x8000)	//TODO: check somewhere else to make sure it's a valid rom
 		return -1;	//failed to read from file
-	*/
 
 	mmu_info.rom_filename = rom_file;
 
@@ -96,29 +135,46 @@ int load_rom(const char* rom_file) {
 	return 0;
 }
 
-/*
+
 int load_ram(const char* ram_file) {
+	if(!cart_has_battery())
+		return 0;	//no battery backed ram
+
+	mmu_info.ram_filename = ram_file;
 	size_t size = load_file(ram_file, memory.cart_ram, (16 * 0x2000));
 	if(size == 0)
 		return -1;	//TODO: handle error?
-	mmu_info.ram_filename = ram_file;
-
 	return 0;
 }
-*/
 
-/*
-int save_ram() {
-	FILE *ram = fopen(mmu_info.ram_filename, "w");
+int save_ram(const char* filename) {
+	if(!cart_has_battery())
+		return 0;	//no battery backed ram
+
+	//create a temporary file
+	char tempfn[strlen(filename) + 4];
+	strcpy(tempfn, filename);
+	strcat(tempfn, ".bak");
+
+	FILE *ram = fopen(tempfn, "wb");
 	if (ram == NULL) {
 		return -1;
 	}
-	size_t size = fwrite(memory.cart_ram, sizeof(uint8_t), mmu_info.ram_file_size, ram);
-	if (size != mmu_info.ram_file_size) 
+
+	size_t size = fwrite(memory.cart_ram, sizeof(uint8_t), get_cart_ram_size(), ram);
+
+	fclose(ram);
+
+	if (size != get_cart_ram_size())
 		return -1;
+
+	//if no error delete old file(if it exists) and rename new file
+	remove(filename);
+	rename(tempfn, filename);
+
 	return 0;
 }
-*/
+
 
 void dma(uint8_t start_addr) {
 	//TODO: set a flag and only allow cpu to access hram until the is "over"
@@ -180,8 +236,13 @@ inline uint8_t read_byte(uint16_t address) {
 				return 0;
 		}
 	}
-	else if (address < 0xA000)
-		return memory.vram[address - 0x8000];
+	else if (address < 0xA000) {
+		//can't access vram in stat mode 3
+		if((memory.io[0x41] & 3) < 3)
+			return memory.vram[address - 0x8000];
+        else
+            return 0;
+	}
 	else if (address < 0xC000) {
 		switch (mmu_info.mbc_type) {
 			case NO_MBC:
@@ -203,8 +264,12 @@ inline uint8_t read_byte(uint16_t address) {
 		return memory.wram[address - 0xC000];
 	else if (address < 0xFE00)
 		return memory.wram[address - 0xE000];	//Mirror of wram (ECHO)
-	else if (address < 0xFEA0)
-		return memory.oam[address - 0xFE00];
+	else if (address < 0xFEA0) {
+        if((memory.io[0x41] & 3) < 2)\
+            return memory.oam[address - 0xFE00];
+        else
+            return 0;
+    }
 	else if (address < 0xFF00)
 		return 0;
 	else if (address < 0xFF80) {
@@ -236,8 +301,11 @@ inline void write_byte(uint16_t address, uint8_t value) {
 				assert(false);
 		}
 	}
-	else if (address < 0xA000)
-		memory.vram[address - 0x8000] = value;	//TODO: check video mode
+	else if (address < 0xA000) {
+		//can't access vram in mode 3
+		if((memory.io[0x41] & 3) < 3)
+			memory.vram[address - 0x8000] = value;
+	}
 	else if (address < 0xC000) {
 		switch (mmu_info.mbc_type) {
 			case NO_MBC:
@@ -262,11 +330,19 @@ inline void write_byte(uint16_t address, uint8_t value) {
 		memory.wram[address - 0xC000] = value;
 	else if (address < 0xFE00)
 		memory.wram[address - 0xE000] = value;	//Mirror of wram (ECHO)
-	else if (address < 0xFEA0)
-		memory.oam[address - 0xFE00] = value;
+	else if (address < 0xFEA0) {
+        //cpu can't access oam during mode 2 or 3
+        if((memory.io[0x41] & 3) < 2)
+            memory.oam[address - 0xFE00] = value;
+    }
+
 	else if (address < 0xFF00)
 		return;	//unusable memory
 	else if (address < 0xFF80) {	//IO
+        if(address == 0xFF41) { //low 3 bits of STAT are read only
+            memory.io[0x41] &= 0xFC;
+            memory.io[0x41] |= (value & 0xFC);
+        }
 		if (address == 0xFF46)
 			dma(value);	//Start LCD OAM DMA
 		else if (address == 0xFF04)	//DIV: If written to, reset
@@ -296,3 +372,4 @@ mbc_type_enum get_mbc_type(uint8_t cart_type) {
 
 	return NO_MBC;	//invalid header
 }
+

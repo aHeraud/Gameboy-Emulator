@@ -35,8 +35,7 @@ void emulator_step() {
 }
 
 void emulator_stop() {
-	//TODO: Save ram to file (if battery back up)
-	//save_ram();
+	save_ram(mmu_info.ram_filename);
 
 	//Clean Up
 	//Destroy SDL window and mmu
