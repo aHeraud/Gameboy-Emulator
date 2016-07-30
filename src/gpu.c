@@ -15,6 +15,7 @@ http://gbdev.gg8.se/wiki/articles/Video_Display
 
 gpu_t gpu;
 
+//TODO: load shades from a config file
 const pixel_t bg_shades[4] = { { 255, 255, 255, 255 }, {170, 170, 170, 255},{ 85, 85, 85, 255 }, { 0, 0, 0, 255 } };
 const pixel_t sprite_shades[4] = { { 255, 255, 255, 255 },{ 170, 170, 170, 255 },{ 85, 85, 85, 255 },{ 0, 0, 0, 255 } };
 

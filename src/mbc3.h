@@ -22,7 +22,17 @@ typedef struct {
 
 extern mbc3_t mbc3;
 
+void mbc3_init();
+
+uint8_t mbc3_read_byte_rom(uint16_t address);
+uint8_t mbc3_read_byte_ram(uint16_t address);
+
+void mbc3_write_byte_rom(uint16_t address, uint8_t value);
+void mbc3_write_byte_ram(uint16_t address, uint8_t value);
+
+/*
 uint8_t read_byte_mbc3(uint16_t address);
 void write_byte_mbc3(uint16_t address, uint8_t value);
+*/
 
 #endif

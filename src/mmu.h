@@ -48,9 +48,6 @@ void dma(uint8_t start_address);
 uint8_t read_byte(uint16_t address);
 void write_byte(uint16_t address, uint8_t value);
 
-uint8_t read_byte_no_mbc(uint16_t address);
-void write_byte_no_mbc(uint16_t address, uint8_t value);
-
 /*Loads rom file, returns 0 on success*/
 int load_rom(const char* rom_file);
 int load_ram(const char* ram_file);
