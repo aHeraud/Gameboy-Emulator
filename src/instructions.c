@@ -1496,8 +1496,7 @@ void rst_28h() {
 
 //$Fx
 void ldh_a_at_a8(uint8_t op8) {
-	//TODO: Add bounds check.
-	cpu.registers.a = memory.io[op8];
+	cpu.registers.a = read_byte(0xFF00 + op8);
 }
 
 void pop_af() {
@@ -1507,7 +1506,7 @@ void pop_af() {
 
 void ld_a_at_c() {
 	//TODO: Add bounds check.
-	cpu.registers.a = memory.io[cpu.registers.c];
+	cpu.registers.a = read_byte(0xFF00 + cpu.registers.c);
 }
 
 void di() {

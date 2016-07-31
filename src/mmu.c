@@ -339,7 +339,6 @@ inline void write_byte(uint16_t address, uint8_t value) {
         if((memory.io[0x41] & 3) < 2)
             memory.oam[address - 0xFE00] = value;
     }
-
 	else if (address < 0xFF00)
 		return;	//unusable memory
 	else if (address < 0xFF80) {	//IO
