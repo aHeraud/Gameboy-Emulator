@@ -15,57 +15,20 @@ FF07 (TAC): Controls TIMA, bit 2 = enable, bit 1,0 = speed select.
 
 //TODO: implement obscure behavior referenced in http://gbdev.gg8.se/wiki/articles/Timer_Obscure_Behaviour
 
-uint64_t timer_counter;
+const uint16_t timer_freq[4] = {1024, 16, 64, 256};
+uint16_t timer_div;
 
 void timer_reset() {
-	timer_counter = 0;
+	timer_div = 0;
 }
 
 void timer_update() {
-	timer_counter += 4;	//update is only called every 4 cycles
+	timer_div += 4;	//update is only called every 4 cycles
 	uint8_t tac = memory.io[0x07];
-
-	if (timer_counter % 256 == 0) {
-		//Div is incremented at 1/256 speed of cpu clock
-		memory.io[4] += 1;
-	}
 
 	if (tac & 4) {
 		//Timer is enabled
-		tac &= 3;
-		bool should_increment = false;
-		switch (tac) {
-		case 0:
-			//clock/1024
-			if (timer_counter % 1024 == 0) {
-				should_increment = true;
-			}
-			break;
-
-		case 1:
-			//clock/16
-			if (timer_counter % 16 == 0) {
-				should_increment = true;
-			}
-			break;
-
-		case 2:
-			//clock/64
-			if (timer_counter % 64 == 0) {
-				should_increment = true;
-			}
-				
-			break;
-
-		case 3:
-			//clock/256
-			if (timer_counter % 256 == 0) {
-				should_increment = true;
-			}
-			break;
-		}
-
-		if (should_increment == true) {
+		if(timer_div % timer_freq[tac & 3] == 0) {
 			memory.io[0x05] += 1;
 			if (memory.io[0x05] == 0) {
 				//Timer overflowed

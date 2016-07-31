@@ -4,6 +4,7 @@
 #include<string.h>
 #include"mmu.h"
 
+#include"timer.h"
 #include"mbc1.h"
 #include"mbc2.h"
 #include"mbc3.h"
@@ -273,7 +274,10 @@ inline uint8_t read_byte(uint16_t address) {
 	else if (address < 0xFF00)
 		return 0;
 	else if (address < 0xFF80) {
-		return memory.io[address - 0xFF00];
+		if(address == 0xFF04)
+			return (timer_div >> 8) & 0xFF;
+		else
+			return memory.io[address - 0xFF00];
 	}
 	else if (address < 0xFFFF)
 		return memory.hram[address - 0xFF80];
@@ -346,7 +350,7 @@ inline void write_byte(uint16_t address, uint8_t value) {
 		if (address == 0xFF46)
 			dma(value);	//Start LCD OAM DMA
 		else if (address == 0xFF04)	//DIV: If written to, reset
-			memory.io[0x04] = 0;
+			timer_div = 0;
 		else
 			memory.io[address - 0xFF00] = value;
 	}

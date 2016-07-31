@@ -4,7 +4,7 @@
 #include<stdint.h>
 #include"mmu.h"
 
-extern uint64_t timer_counter;
+extern uint16_t timer_div;
 
 void timer_reset();
 void timer_update();
