@@ -4,7 +4,12 @@
 
 joypad_t joypad;
 
-const SDL_Keycode joypad_default_keybindings[8] = { SDLK_UP, SDLK_DOWN, SDLK_LEFT, SDLK_RIGHT, SDLK_c, SDLK_v, SDLK_z, SDLK_x };
+const SDL_Keycode joypad_default_keybindings[8] = {
+		SDLK_UP, SDLK_DOWN, SDLK_LEFT, SDLK_RIGHT, SDLK_c, SDLK_v, SDLK_z, SDLK_x };
+const SDL_GameControllerButton joypad_default_controllerbindings[8] = {
+		SDL_CONTROLLER_BUTTON_DPAD_UP, SDL_CONTROLLER_BUTTON_DPAD_DOWN, SDL_CONTROLLER_BUTTON_DPAD_LEFT, SDL_CONTROLLER_BUTTON_DPAD_RIGHT,
+		SDL_CONTROLLER_BUTTON_BACK, SDL_CONTROLLER_BUTTON_START, SDL_CONTROLLER_BUTTON_A, SDL_CONTROLLER_BUTTON_B };
+
 
 void joypad_init() {
 	for (int i = 0; i < 8; ++i)
@@ -62,4 +67,32 @@ void joypad_keyup(SDL_Keycode key) {
 	else if (key == joypad_default_keybindings[JOYPAD_B]) joypad.keys[JOYPAD_B] = false;
 	else if (key == joypad_default_keybindings[JOYPAD_SELECT]) joypad.keys[JOYPAD_SELECT] = false;
 	else if (key == joypad_default_keybindings[JOYPAD_START]) joypad.keys[JOYPAD_START] = false;
+}
+
+void joypad_buttondown(SDL_GameControllerButton button) {
+	int index = -1;
+	for(int i = 0; i < 8; ++i) {
+		if(joypad_default_controllerbindings[i] == button) {
+			index = i;
+			break;
+		}
+	}
+
+	if(index != -1) {
+		joypad.keys[index] = true;
+	}
+}
+
+void joypad_buttonup(SDL_GameControllerButton button) {
+	int index = -1;
+	for(int i = 0; i < 8; ++i) {
+		if(joypad_default_controllerbindings[i] == button) {
+			index = i;
+			break;
+		}
+	}
+
+	if(index != -1) {
+		joypad.keys[index] = false;
+	}
 }

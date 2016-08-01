@@ -5,6 +5,7 @@
 #include<stdbool.h>
 
 #include<SDL_keyboard.h>
+#include<SDL_gamecontroller.h>
 
 #define JOYPAD_UP 0
 #define JOYPAD_DOWN 1
@@ -25,8 +26,15 @@ typedef struct {
 extern joypad_t joypad;
 
 void joypad_init();
+
+//keyboards
 void joypad_keydown(SDL_Keycode key);
 void joypad_keyup(SDL_Keycode key);
+
+//controllers
+void joypad_buttondown(SDL_GameControllerButton button);
+void joypad_buttonup(SDL_GameControllerButton button);
+
 void joypad_update();
 
 #endif
