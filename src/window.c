@@ -9,9 +9,6 @@ window_t window;
 Returns 0 for success, 1 for error
 */
 int window_init(const char *name, int width, int height) {
-	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER) < 0)
-		return 1;
-
 	window.id = SDL_CreateWindow(name, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, width, height, 0);
 	if (window.id == NULL)
 		return 1;
@@ -20,14 +17,6 @@ int window_init(const char *name, int width, int height) {
 	window.screen = SDL_CreateRGBSurfaceFrom(gpu.screen, 160, 144, 32, (160 * 4), 0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000);
 	if (window.screen == NULL)
 		return 1;
-
-	//look for controllers
-	//TODO: split this stuff off into a seperate sdl init
-	for(int i = 0; i < SDL_NumJoysticks(); ++i) {
-		if(SDL_IsGameController(i) == SDL_TRUE) {
-			SDL_GameControllerOpen(i);
-		}
-	}
 
 	return 0;
 }

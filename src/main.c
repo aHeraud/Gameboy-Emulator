@@ -8,6 +8,16 @@
 #include"emulator.h"
 
 int main(int argc, char** argv) {
+
+	/* Set up SDL*/
+	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER) < 0)
+		return 1;
+	for(int i = 0; i < SDL_NumJoysticks(); ++i) {
+		if(SDL_IsGameController(i) == SDL_TRUE) {
+			SDL_GameControllerOpen(i);
+		}
+	}
+
 	const char* rom_file = argv[1];
 	if (argc < 2) {
 		printf("Invalid Arguments: pass name of a rom to play.\n");
@@ -53,4 +63,3 @@ int main(int argc, char** argv) {
 	
 	return 0;
 }
-
